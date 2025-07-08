@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // app/(dashboard)/components/CameraComponent.tsx
 "use client";
@@ -132,9 +133,9 @@ const CameraComponent = () => {
   return (
     <div className="flex flex-col items-center gap-6">
       {/* Container untuk Video */}
-      <div className="w-full max-w-lg rounded-lg overflow-hidden shadow-lg bg-gray-900">
+      <div className="sm:w-full max-w-lg rounded-lg overflow-hidden shadow-lg bg-gray-900">
         {cameraError ? (
-          <div className="h-96 flex items-center justify-center text-white bg-red-500 p-4">
+          <div className="h-140 sm:h-96 flex items-center justify-center text-white bg-red-500 p-4">
             <p>{cameraError}</p>
           </div>
         ) : (
@@ -143,7 +144,7 @@ const CameraComponent = () => {
             autoPlay
             playsInline
             muted
-            className="w-full h-auto"
+            className="w-full h-140 sm:h-96"
             style={{ transform: "scaleX(-1)" }}
           />
         )}

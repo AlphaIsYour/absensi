@@ -9,7 +9,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Model yang dibutuhkan NextAuth
 model Account {
   id                 String  @id @default(cuid())
   userId             String
@@ -41,7 +40,7 @@ model User {
   email         String?    @unique
   emailVerified DateTime?
   image         String?
-  role          String     @default("USER") // Tambahkan role untuk admin
+  role          String     @default("USER")
   accounts      Account[]
   sessions      Session[]
   absensi       Absensi[]
@@ -54,14 +53,23 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// Model custom untuk absensi
 model Absensi {
   id          String    @id @default(cuid())
   userId      String
-  user        User      @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   checkInTime DateTime  @default(now())
-  latitude    Float
-  longitude   Float
-  photoUrl    String // URL foto yang disimpan di Cloud Storage
+  status    StatusAbsensi @default(HADIR)
+  latitude  Float?
+  longitude Float?
+  photoUrl  String?
+  keterangan String?
+   isAnomali Boolean @default(false)
+  timestamp DateTime @default(now())
   createdAt   DateTime  @default(now())
+}
+
+enum StatusAbsensi {
+  HADIR       
+  IZIN         
+  GAGAL_LOKASI 
 }

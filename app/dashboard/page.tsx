@@ -16,7 +16,7 @@ const DashboardPage = async () => {
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold">Halo, {session.user.name}!</h1>
         <p className="text-gray-600 mt-2">
-          Siap untuk absen? Posisikan wajah Anda di depan kamera.
+          Pastikan untuk memposisikan wajah Anda di depan kamera.
         </p>
       </div>
 
