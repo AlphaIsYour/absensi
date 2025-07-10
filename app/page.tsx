@@ -31,7 +31,7 @@ const SignInPage = () => {
     return (
       <div className="relative min-h-screen w-full">
         <Image
-          src={"/background/bg3.jpg"}
+          src={"/background/bg2.jpg"}
           alt="Abstract background"
           layout="fill"
           objectFit="cover"
@@ -45,12 +45,15 @@ const SignInPage = () => {
           <main className="flex-grow flex items-center justify-center p-4">
             <div className="w-70 sm:w-full max-w-md p-4 sm:p-8 space-y-2 sm:space-y-6 bg-white bg-opacity-90 backdrop-blur-sm rounded-2xl shadow-xl">
               <div className="text-center">
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900">
                   Selamat Datang
                 </h1>
                 <p className="mt-2 text-sm text-gray-600">
                   Masuk untuk melakukan absensi
                 </p>
+                <input />
+
+                <p className="mt-2 text-sm text-gray-600">Atau masuk dengan</p>
               </div>
 
               <button

@@ -41,6 +41,13 @@ model User {
   emailVerified DateTime?
   image         String?
   role          String     @default("USER")
+  password String?
+  kantorId      String?
+  kantor        Kantor?     @relation(fields: [kantorId], references: [id])
+  jadwalKerjaId String?
+  jadwalKerja   JadwalKerja?@relation(fields: [jadwalKerjaId], references: [id])
+phone         String? 
+jatahCuti     Int         @default(12)
   accounts      Account[]
   sessions      Session[]
   absensi       Absensi[]
@@ -54,22 +61,65 @@ model VerificationToken {
 }
 
 model Absensi {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  checkInTime DateTime  @default(now())
-  status    StatusAbsensi @default(HADIR)
-  latitude  Float?
-  longitude Float?
-  photoUrl  String?
+  id         String        @id @default(cuid())
+  
+  status     StatusAbsensi
+  timestamp  DateTime      // Waktu event terjadi dalam UTC
+  
+  // Detail opsional
   keterangan String?
-   isAnomali Boolean @default(false)
-  timestamp DateTime @default(now())
-  createdAt   DateTime  @default(now())
+  photoUrl   String?
+  latitude   Float?
+  longitude  Float?
+  
+  // Audit Trail & Status
+  isAnomali  Boolean       @default(false)
+  approvedBy String?       // ID Admin yang menyetujui (misal: untuk cuti/izin)
+  editedBy   String?       // ID Admin yang mengedit record
+  editReason String?       // Alasan koreksi
+  
+  // Relasi ke User
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+}
+
+model Kantor {
+  id        String   @id @default(cuid())
+  nama      String   
+  regional  String   @unique 
+  latitude  Float
+  longitude Float
+  radius    Int      @default(15)
+  timezone  String  
+  
+  users     User[] 
+
+  @@index([regional])
+}
+
+model JadwalKerja {
+  id          String @id @default(cuid())
+  namaJadwal  String @unique // "Office Hour (Senin-Jumat)", "Shift Malam"
+  hariKerja   Int[]  // [1, 2, 3, 4, 5] untuk Senin-Jumat
+  jamMasuk    String // "08:30"
+  jamPulang   String // "17:30"
+
+  users       User[]
 }
 
 enum StatusAbsensi {
-  HADIR       
-  IZIN         
-  GAGAL_LOKASI 
+  HADIR
+  IZIN
+  SAKIT
+  CUTI
+  DINAS_LUAR
+  GAGAL_LOKASI
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPERADMIN
 }

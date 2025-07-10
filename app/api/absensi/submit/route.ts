@@ -1,95 +1,132 @@
-// app/api/absensi/submit/route.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// app/api/absensi/submit/route.ts (SUDAH DIPERBAIKI)
 
 import { NextResponse } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import haversine from "haversine-distance";
-import { put } from "@vercel/blob"; // Import fungsi `put` dari Vercel Blob
+import { put } from "@vercel/blob";
+import { Kantor, StatusAbsensi } from "@prisma/client";
 
-// --- KONFIGURASI (Harus sama dengan di frontend) ---
-interface Location {
-  latitude: number;
-  longitude: number;
+// Tipe data yang diharapkan dari body request
+interface SubmitBody {
+  photo: string | null;
+  location: { latitude: number; longitude: number } | null;
+  status: StatusAbsensi;
+  keterangan: string | null;
 }
-const OFFICE_COORDINATES: Location = {
-  latitude: -7.33535,
-  longitude: 112.800833,
-};
-const MAX_DISTANCE_METERS = 15;
-// ---------------------------------------------------
 
 export async function POST(req: Request) {
   try {
-    // 1. Cek Sesi User
     const session = await getAuthSession();
     if (!session?.user) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { photo, location } = body;
+    const body: SubmitBody = await req.json();
+    const { status, photo, location, keterangan } = body;
 
-    // 2. Validasi Input Dasar
-    if (!photo || !location?.latitude || !location?.longitude) {
+    // Ambil data kantor user untuk validasi
+    const userWithKantor = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { kantor: true },
+    });
+
+    if (!userWithKantor?.kantor) {
       return NextResponse.json(
-        { message: "Data foto atau lokasi tidak lengkap" },
+        { message: "User tidak terdaftar di kantor manapun." },
         { status: 400 }
       );
     }
 
-    // 3. Validasi Lokasi dan Tentukan Status
-    const distance = haversine(OFFICE_COORDINATES, location);
-    const isInArea = distance <= MAX_DISTANCE_METERS;
+    // --- LOGIKA BARU YANG LEBIH PINTAR ---
 
-    // Tentukan status berdasarkan lokasi
-    const statusAbsensi = isInArea ? "HADIR" : "GAGAL_LOKASI";
-    const responseMessage = isInArea
-      ? "Absensi berhasil direkam"
-      : `Upaya absensi terekam, namun Anda berada di luar area kantor (${Math.round(
-          distance
-        )}m).`;
+    const dataToCreate: any = {
+      userId: session.user.id,
+      status: status,
+      keterangan: keterangan,
+      timestamp: new Date(),
+    };
+    let responseMessage = "Pengajuan Anda telah berhasil direkam.";
+    let responseStatus = 201;
 
-    // 4. Upload Foto ke Vercel Blob
-    // Konversi Data URL (base64) ke Buffer agar bisa di-upload
-    const photoBuffer = Buffer.from(
-      photo.replace(/^data:image\/\w+;base64,/, ""),
-      "base64"
-    );
+    // Jika statusnya adalah HADIR, lakukan semua validasi lama
+    if (status === "HADIR") {
+      // Validasi input khusus untuk HADIR
+      if (!photo || !location?.latitude || !location?.longitude) {
+        return NextResponse.json(
+          { message: "Data foto atau lokasi tidak lengkap untuk absen Hadir." },
+          { status: 400 }
+        );
+      }
 
-    // Buat nama file yang unik untuk mencegah konflik
-    const filename = `absen-${session.user.id}-${Date.now()}.jpg`;
+      // Validasi lokasi & tentukan status sebenarnya (bisa jadi GAGAL_LOKASI)
+      const officeCoords = {
+        latitude: userWithKantor.kantor.latitude,
+        longitude: userWithKantor.kantor.longitude,
+      };
+      const maxDistance = userWithKantor.kantor.radius;
+      const distance = haversine(officeCoords, location);
+      const isInArea = distance <= maxDistance;
 
-    const blob = await put(filename, photoBuffer, {
-      access: "public", // Foto bisa diakses publik melalui URL-nya
-      contentType: "image/jpeg",
-    });
+      dataToCreate.status = isInArea ? "HADIR" : "GAGAL_LOKASI";
+      responseMessage = isInArea
+        ? "Absensi berhasil direkam"
+        : `Upaya absensi terekam, namun Anda berada di luar area kantor (${Math.round(
+            distance
+          )}m).`;
+      responseStatus = isInArea ? 201 : 200;
 
-    // URL foto dari Vercel Blob akan ada di `blob.url`
-    const photoUrl = blob.url;
+      // Upload foto ke Vercel Blob
+      const photoBuffer = Buffer.from(
+        photo.replace(/^data:image\/\w+;base64,/, ""),
+        "base64"
+      );
+      const filename = `absen-${session.user.id}-${Date.now()}.jpg`;
+      const blob = await put(filename, photoBuffer, {
+        access: "public",
+        contentType: "image/jpeg",
+      });
 
-    // 5. Simpan Data ke Database dengan Status yang Tepat
+      dataToCreate.photoUrl = blob.url;
+      dataToCreate.latitude = location.latitude;
+      dataToCreate.longitude = location.longitude;
+    } else if (status === "CUTI") {
+      // Logika tambahan untuk CUTI (jika perlu)
+      // Misalnya, cek sisa jatah cuti
+      // (Untuk sekarang kita biarkan lolos dulu)
+      if (userWithKantor.jatahCuti <= 0) {
+        return NextResponse.json(
+          { message: "Jatah cuti Anda sudah habis." },
+          { status: 400 }
+        );
+      }
+      // Kurangi jatah cuti dalam transaksi
+      await prisma.$transaction([
+        prisma.absensi.create({ data: dataToCreate }),
+        prisma.user.update({
+          where: { id: session.user.id },
+          data: { jatahCuti: { decrement: 1 } },
+        }),
+      ]);
+      return NextResponse.json(
+        { message: responseMessage },
+        { status: responseStatus }
+      );
+    }
+
+    // Untuk status lain seperti IZIN_SAKIT, DINAS_LUAR, cukup simpan saja
     await prisma.absensi.create({
-      data: {
-        userId: session.user.id,
-        status: statusAbsensi, // Menggunakan status yang sudah kita tentukan
-        latitude: location.latitude,
-        longitude: location.longitude,
-        photoUrl: photoUrl, // Simpan URL dari Vercel Blob
-        // 'keterangan' dan 'isAnomali' akan menggunakan nilai default
-      },
+      data: dataToCreate,
     });
-
-    // 6. Kirim Respon Sukses
-    // Kirim status 201 (Created) jika hadir, dan 200 (OK) jika gagal lokasi tapi terekam
-    const responseStatus = isInArea ? 201 : 200;
 
     return NextResponse.json(
-      { message: responseMessage, data: { photoUrl, status: statusAbsensi } },
+      { message: responseMessage },
       { status: responseStatus }
     );
   } catch (error) {
     console.error("Submit Absensi Error:", error);
-    // Jika error berasal dari Vercel Blob, mungkin ada pesan spesifik
     if (error instanceof Error) {
       return NextResponse.json(
         { message: `Terjadi kesalahan pada server: ${error.message}` },
