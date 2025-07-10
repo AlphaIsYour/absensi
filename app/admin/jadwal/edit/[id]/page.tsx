@@ -5,8 +5,15 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
-const EditJadwalPage = async ({ params }: { params: { id: string } }) => {
-  const { id } = params;
+// FIXED: Define proper PageProps interface for Next.js 15
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
+const EditJadwalPage = async ({ params }: PageProps) => {
+  // FIXED: Await params for Next.js 15
+  const resolvedParams = await params;
+  const { id } = resolvedParams;
 
   const jadwal = await prisma.jadwalKerja.findUnique({
     where: { id },

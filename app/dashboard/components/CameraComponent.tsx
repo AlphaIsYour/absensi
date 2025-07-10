@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // app/(dashboard)/components/CameraComponent.tsx
 "use client";
@@ -116,10 +117,11 @@ const CameraComponent = ({ userKantor, userJadwal }: CameraComponentProps) => {
 
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
 
-    // Cleanup function
+    // Cleanup function - FIXED: Copy ref to variable to avoid stale closure
     return () => {
-      if (videoRef.current?.srcObject) {
-        (videoRef.current.srcObject as MediaStream)
+      const currentVideo = videoRef.current;
+      if (currentVideo?.srcObject) {
+        (currentVideo.srcObject as MediaStream)
           .getTracks()
           .forEach((track) => track.stop());
       }

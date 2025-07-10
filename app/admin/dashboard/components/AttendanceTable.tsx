@@ -6,7 +6,7 @@ import Image from "next/image";
 import { UserWithAbsensiStatus } from "../page";
 import { Kantor } from "@prisma/client"; // Sebaiknya import tipe Kantor juga
 
-// Komponen StatusBadge tidak perlu diubah
+// Komponen StatusBadge - ditambahkan DINAS_LUAR
 const StatusBadge = ({
   status,
 }: {
@@ -19,6 +19,7 @@ const StatusBadge = ({
     CUTI: "bg-purple-100 text-purple-800",
     GAGAL_LOKASI: "bg-orange-100 text-orange-800",
     TANPA_KETERANGAN: "bg-gray-200 text-gray-800",
+    DINAS_LUAR: "bg-teal-100 text-teal-800",
   };
   const text = {
     HADIR: "Hadir",
@@ -27,6 +28,7 @@ const StatusBadge = ({
     CUTI: "Cuti",
     GAGAL_LOKASI: "Gagal Lokasi",
     TANPA_KETERANGAN: "Tanpa Keterangan",
+    DINAS_LUAR: "Dinas Luar",
   };
   return (
     <span

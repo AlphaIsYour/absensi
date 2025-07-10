@@ -30,20 +30,22 @@ export interface SummaryStats {
   gagalLokasi: number;
 }
 
-const AdminDashboardPage = async ({
-  searchParams,
-}: {
-  // Tipe searchParams yang lebih sederhana dan umum
-  searchParams: { [key: string]: string | undefined };
-}) => {
+// FIXED: Proper type for Next.js 15 searchParams
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | undefined }>;
+}
+
+const AdminDashboardPage = async ({ searchParams }: PageProps) => {
   // 1. Autentikasi dan Otorisasi Session
   const session = await getAuthSession();
   if (!session?.user || session.user.role !== "SUPERADMIN") {
     return redirect("/sign-in");
   }
 
-  // 2. Pengambilan Parameter dan Data Awal
-  const selectedKantorId = searchParams.kantorId;
+  // 2. Await searchParams for Next.js 15
+  const resolvedSearchParams = await searchParams;
+  const selectedKantorId = resolvedSearchParams.kantorId;
+
   const allKantor = await prisma.kantor.findMany({
     orderBy: { regional: "asc" },
   });

@@ -5,9 +5,14 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 
+interface PageProps {
+  params: Promise<{ id: string }>;
+}
+
 // Komponen ini menerima `params` yang berisi `id` dari URL
-const EditKantorPage = async ({ params }: { params: { id: string } }) => {
-  const { id } = params;
+const EditKantorPage = async ({ params }: PageProps) => {
+  const resolvedParams = await params;
+  const { id } = resolvedParams;
 
   // 1. Ambil data kantor yang mau diedit dari database
   const kantor = await prisma.kantor.findUnique({
